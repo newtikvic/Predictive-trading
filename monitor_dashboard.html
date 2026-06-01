@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+<title>Trade Guardian Engine v2</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#020406;--bg2:#070c12;--bg3:#0a1320;--bg4:#0d1828;
+  --border:#162538;--border2:#0c1a28;
+  --text:#bdd4e8;--muted:#3d5a74;
+  --accent:#00c8ff;--accent2:#006a9e;
+  --green:#00ff88;--green2:#00963f;--green3:rgba(0,255,136,.08);
+  --orange:#ff9500;--orange2:rgba(255,149,0,.08);
+  --red:#ff1e3c;--red2:#8a0018;--red3:rgba(255,30,60,.08);
+  --gold:#ffc840;
+  --mono:'Share Tech Mono',monospace;
+  --ui:'Rajdhani',sans-serif;
+  --hd:'Orbitron',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--ui);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,200,255,.012) 2px,rgba(0,200,255,.012) 4px)}
+
+/* ── HEADER ── */
+.hdr{position:sticky;top:0;z-index:100;background:rgba(2,4,6,.96);
+  backdrop-filter:blur(8px);border-bottom:1px solid var(--border);
+  padding:10px 14px;display:flex;align-items:center;justify-content:space-between}
+.hdr-l{font-family:var(--hd);font-size:11px;letter-spacing:2px;color:var(--accent);
+  text-shadow:0 0 12px rgba(0,200,255,.35);line-height:1.3}
+.hdr-l span{display:block;font-size:8px;color:var(--muted);letter-spacing:3px;margin-top:2px}
+.hdr-r{display:flex;align-items:center;gap:10px}
+.slot-count{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px}
+.slot-count b{color:var(--accent)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--green);
+  box-shadow:0 0 8px rgba(0,255,136,.5);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.6)}}
+
+/* ── SHELL ── */
+.shell{position:relative;z-index:1;max-width:500px;margin:0 auto;padding:12px 10px 80px}
+
+/* ── ADD FORM ── */
+.add-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;
+  padding:14px;margin-bottom:16px}
+.add-title{font-family:var(--mono);font-size:9px;letter-spacing:2px;
+  color:var(--muted);text-transform:uppercase;margin-bottom:10px}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.field label{font-family:var(--mono);font-size:8px;letter-spacing:1.5px;
+  color:var(--muted);text-transform:uppercase;display:block;margin-bottom:3px}
+.field input,.field select{background:var(--bg3);border:1px solid var(--border);
+  border-radius:4px;color:var(--text);font-family:var(--mono);font-size:13px;
+  padding:8px 10px;outline:none;width:100%;-webkit-appearance:none;
+  transition:border-color .2s}
+.field input:focus,.field select:focus{border-color:var(--accent2)}
+.field select option{background:var(--bg3)}
+.btn-add{width:100%;background:linear-gradient(90deg,#005a7a,#0099c2);
+  border:none;border-radius:4px;color:#fff;font-family:var(--hd);
+  font-size:11px;letter-spacing:2px;padding:11px;cursor:pointer;
+  text-transform:uppercase;transition:opacity .2s}
+.btn-add:active{opacity:.8}.btn-add:disabled{opacity:.3;cursor:not-allowed}
+.errmsg{font-family:var(--mono);font-size:10px;color:var(--red);
+  background:var(--red3);border:1px solid var(--red2);border-radius:4px;
+  padding:8px;margin-bottom:8px;text-align:center}
+
+/* ── GRID OF TILES ── */
+.grid-header{font-family:var(--mono);font-size:9px;letter-spacing:2px;
+  color:var(--muted);text-transform:uppercase;margin-bottom:10px;padding:0 2px}
+.tiles{display:flex;flex-direction:column;gap:12px}
+
+/* ── SINGLE TILE ── */
+.tile{background:var(--bg2);border:1px solid var(--border);border-radius:8px;
+  overflow:hidden;transition:border-color .5s,box-shadow .5s}
+.tile.health-green{border-color:var(--green2);box-shadow:0 0 16px rgba(0,255,136,.12)}
+.tile.health-orange{border-color:var(--orange);box-shadow:0 0 16px rgba(255,149,0,.12)}
+.tile.health-red{border-color:var(--red);box-shadow:0 0 20px rgba(255,30,60,.15)}
+
+/* Tile top bar */
+.tile-top{display:flex;align-items:center;justify-content:space-between;
+  padding:10px 12px 8px;border-bottom:1px solid var(--border2)}
+.tile-sym{font-family:var(--hd);font-size:18px;font-weight:900;
+  color:var(--accent);letter-spacing:1px}
+.tile-meta{display:flex;align-items:center;gap:6px}
+.dir-badge{font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:3px;letter-spacing:1.5px}
+.dir-l{background:rgba(0,255,136,.12);color:var(--green);border:1px solid var(--green2)}
+.dir-s{background:var(--red3);color:var(--red);border:1px solid var(--red2)}
+.btn-close-tile{background:transparent;border:1px solid var(--border);
+  color:var(--muted);border-radius:3px;font-family:var(--mono);font-size:9px;
+  padding:2px 7px;cursor:pointer;transition:all .2s}
+.btn-close-tile:hover{border-color:var(--red2);color:var(--red)}
+.tile-ts{font-family:var(--mono);font-size:7.5px;color:var(--muted);margin-top:2px}
+
+/* Tile price+pnl row */
+.price-row{display:flex;align-items:center;justify-content:space-between;
+  padding:8px 12px;background:var(--bg3);border-bottom:1px solid var(--border2)}
+.live-price{font-family:var(--hd);font-size:20px;font-weight:900;color:var(--accent)}
+.pnl-block{text-align:right}
+.pnl-pct{font-family:var(--hd);font-size:16px;font-weight:700}
+.pnl-usd{font-family:var(--mono);font-size:9px}
+.pos{color:var(--green)}.neg{color:var(--red)}
+
+/* Verdict strip */
+.verdict-strip{padding:10px 12px;border-bottom:1px solid var(--border2);
+  transition:background .5s}
+.vs-green{background:var(--green3)}
+.vs-orange{background:var(--orange2)}
+.vs-red{background:var(--red3);animation:flk 1.3s ease-in-out infinite}
+@keyframes flk{0%,100%{opacity:1}50%{opacity:.85}}
+.verdict-lbl{font-family:var(--mono);font-size:8px;letter-spacing:2px;
+  color:var(--muted);text-transform:uppercase;margin-bottom:4px}
+.verdict-txt{font-family:var(--hd);font-size:12px;font-weight:700;
+  letter-spacing:.8px;text-transform:uppercase;line-height:1.3}
+.vc-green{color:var(--green)}.vc-orange{color:var(--orange)}.vc-red{color:var(--red)}
+.health-bar-wrap{margin-top:8px;display:flex;align-items:center;gap:6px}
+.health-bar{flex:1;height:3px;background:var(--bg3);border-radius:99px;overflow:hidden}
+.health-fill{height:100%;border-radius:99px;transition:width .8s,background .5s}
+.hfg{background:var(--green)}.hfo{background:var(--orange)}.hfr{background:var(--red)}
+.health-pct{font-family:var(--mono);font-size:9px;color:var(--muted);white-space:nowrap}
+
+/* Structural verdict */
+.sv-row{display:flex;align-items:center;justify-content:space-between;
+  padding:6px 12px;border-bottom:1px solid var(--border2)}
+.sv-badge{font-family:var(--mono);font-size:8px;letter-spacing:1px;
+  padding:3px 8px;border-radius:3px;text-transform:uppercase}
+.svg{color:var(--green);border:1px solid var(--green2);background:var(--green3)}
+.svo{color:var(--orange);border:1px solid var(--orange);background:var(--orange2)}
+.svr{color:var(--red);border:1px solid var(--red2);background:var(--red3)}
+.sv-key{font-family:var(--mono);font-size:8px;color:var(--muted)}
+
+/* MTF grid */
+.mtf-section{padding:8px 12px;border-bottom:1px solid var(--border2)}
+.section-lbl{font-family:var(--mono);font-size:8px;letter-spacing:2px;
+  color:var(--muted);text-transform:uppercase;margin-bottom:6px}
+.mtf-align-badge{font-family:var(--mono);font-size:9px;letter-spacing:1px;
+  padding:3px 10px;border-radius:3px;text-transform:uppercase;display:inline-block;margin-bottom:6px}
+.mab-green{color:var(--green);border:1px solid var(--green2);background:var(--green3)}
+.mab-orange{color:var(--orange);border:1px solid var(--orange);background:var(--orange2)}
+.mab-red{color:var(--red);border:1px solid var(--red2);background:var(--red3)}
+.mab-grey{color:var(--muted);border:1px solid var(--border)}
+.tf-row{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.tf-cell{background:var(--bg3);border-radius:4px;padding:6px 4px;text-align:center}
+.tf-lbl{font-family:var(--mono);font-size:7.5px;color:var(--muted);letter-spacing:1px;margin-bottom:4px}
+.tf-score{font-family:var(--hd);font-size:14px;font-weight:700}
+.tf-rsi{font-family:var(--mono);font-size:8px;color:var(--muted);margin-top:2px}
+.sc0{color:var(--red)}.sc1{color:var(--orange)}.sc2{color:var(--orange)}.sc3{color:var(--green)}
+.ind-row{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:4px}
+.ind-chip{background:var(--bg3);border-radius:3px;padding:4px;text-align:center}
+.ind-lbl{font-family:var(--mono);font-size:7px;color:var(--muted);letter-spacing:1px}
+.ind-val{font-family:var(--mono);font-size:9px;font-weight:bold;margin-top:2px}
+.iv-bull{color:var(--green)}.iv-bear{color:var(--red)}.iv-neu{color:var(--muted)}
+
+/* Mini metrics */
+.metrics-row{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:8px 12px;border-bottom:1px solid var(--border2)}
+.mm{background:var(--bg3);border-radius:4px;padding:6px 8px}
+.mm-lbl{font-family:var(--mono);font-size:7.5px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:3px}
+.mm-val{font-family:var(--hd);font-size:13px;font-weight:700}
+.ca{color:var(--accent)}.cg{color:var(--gold)}.cm{color:var(--muted)}
+
+/* Flags */
+.flags-row{display:flex;gap:5px;padding:6px 12px;border-bottom:1px solid var(--border2);flex-wrap:wrap}
+.flag{font-family:var(--mono);font-size:8px;letter-spacing:1px;padding:3px 8px;
+  border-radius:3px;border:1px solid;text-transform:uppercase}
+.fg2{color:var(--green);border-color:var(--green2);background:var(--green3)}
+.fo2{color:var(--orange);border-color:var(--orange);background:var(--orange2)}
+.fr2{color:var(--red);border-color:var(--red2);background:var(--red3)}
+.foff{color:var(--muted);border-color:var(--border2);opacity:.35}
+
+/* Playbook */
+.playbook{padding:8px 12px 12px;background:rgba(2,6,9,.8)}
+.pb-lbl{font-family:var(--mono);font-size:7.5px;letter-spacing:2px;
+  color:var(--muted);text-transform:uppercase;margin-bottom:5px}
+.pb-txt{font-family:var(--mono);font-size:10px;color:#8ab8d0;line-height:1.6}
+.pb-wait{font-family:var(--mono);font-size:10px;color:var(--orange);
+  margin-top:4px;line-height:1.6}
+
+/* Empty state */
+.empty{text-align:center;padding:40px 0}
+.empty-icon{font-size:36px;opacity:.15;margin-bottom:12px}
+.empty-txt{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:1px}
+
+/* Loading tile */
+.tile-loading{padding:20px;text-align:center}
+.spin{width:16px;height:16px;border:2px solid var(--border);
+  border-top-color:var(--accent);border-radius:50%;
+  animation:sp .8s linear infinite;margin:0 auto 8px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.spin-txt{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px}
+
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="hdr">
+  <div class="hdr-l">TRADE GUARDIAN ENGINE
+    <span>V2 · MULTI-ASSET COMMAND CENTER</span>
+  </div>
+  <div class="hdr-r">
+    <div class="slot-count"><b id="slotUsed">0</b>/5 SLOTS</div>
+    <div class="dot"></div>
+  </div>
+</div>
+
+<div class="shell">
+
+  <!-- Add position form -->
+  <div class="add-card">
+    <div class="add-title">// ADD POSITION (MAX 5)</div>
+    <div id="errBox" class="errmsg hidden"></div>
+    <div class="fg">
+      <div class="field"><label>Symbol</label>
+        <input id="iSym" type="text" placeholder="BTCUSDT" maxlength="20" autocapitalize="characters"/>
+      </div>
+      <div class="field"><label>Direction</label>
+        <select id="iDir">
+          <option value="LONG">▲ LONG</option>
+          <option value="SHORT">▼ SHORT</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg">
+      <div class="field"><label>Entry Price</label>
+        <input id="iEntry" type="number" placeholder="0.00" step="any" min="0"/>
+      </div>
+      <div class="field"><label>Position Size</label>
+        <input id="iSize" type="number" placeholder="0.00" step="any" min="0"/>
+      </div>
+    </div>
+    <button class="btn-add" id="btnAdd" onclick="addPosition()">+ ADD POSITION</button>
+  </div>
+
+  <!-- Grid header -->
+  <div id="gridHeader" class="grid-header hidden">// ACTIVE POSITIONS</div>
+
+  <!-- Empty state -->
+  <div id="emptyState" class="empty">
+    <div class="empty-icon">⬡</div>
+    <div class="empty-txt">NO ACTIVE POSITIONS<br/>ADD UP TO 5 TRADES ABOVE</div>
+  </div>
+
+  <!-- Tiles container -->
+  <div class="tiles" id="tilesContainer"></div>
+
+</div>
+
+<script>
+const API = '';
+const activeSym = new Set();
+let pollTimer = null;
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function f(n,d=2){ return n==null||isNaN(n)?'—':Number(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d}); }
+function fp(p){ if(!p)return'—'; return p>=1000?'$'+f(p,2):p>=1?'$'+f(p,4):'$'+f(p,6); }
+function fts(e){ return e?new Date(e*1000).toLocaleTimeString():''; }
+function pnlClass(v){ return v>=0?'pos':'neg'; }
+function healthClass(h){ return h>=65?'green':h>=40?'orange':'red'; }
+function verdictClass(v){
+  if(!v)return'grey';
+  if(v.includes('STRONG HOLD'))return'green';
+  if(v.includes('ABORT')||v.includes('BROKEN'))return'red';
+  return'orange';
+}
+function svClass(c){ return c==='green'?'svg':c==='red'?'svr':'svo'; }
+function mtfBadgeClass(c){ return c==='green'?'mab-green':c==='red'?'mab-red':c==='orange'?'mab-orange':'mab-grey'; }
+function scClass(n){ return 'sc'+n; }
+function indClass(ok){ return ok?'iv-bull':'iv-bear'; }
+
+// ── Add position ──────────────────────────────────────────────────────────────
+async function addPosition(){
+  const sym   = document.getElementById('iSym').value.trim().toUpperCase();
+  const dir   = document.getElementById('iDir').value;
+  const ep    = parseFloat(document.getElementById('iEntry').value);
+  const sz    = parseFloat(document.getElementById('iSize').value);
+  const err   = document.getElementById('errBox');
+  const btn   = document.getElementById('btnAdd');
+  err.classList.add('hidden');
+
+  if(!sym||!ep||!sz||ep<=0||sz<=0){
+    err.textContent='All fields required and > 0.'; err.classList.remove('hidden'); return;
+  }
+  if(activeSym.size>=5){
+    err.textContent='Maximum 5 positions reached. Close one to add another.'; err.classList.remove('hidden'); return;
+  }
+
+  btn.disabled=true; btn.textContent='CONNECTING...';
+  try{
+    const r=await fetch(API+'/init',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({symbol:sym,direction:dir,entry_price:ep,position_size:sz,label:sym})});
+    if(!r.ok){const j=await r.json();throw new Error(j.detail||'Init failed');}
+    activeSym.add(sym);
+    createTile(sym, dir, ep, sz);
+    document.getElementById('iSym').value='';
+    document.getElementById('iEntry').value='';
+    document.getElementById('iSize').value='';
+    updateUI();
+  }catch(e){
+    err.textContent=e.message; err.classList.remove('hidden');
+  }finally{
+    btn.disabled=false; btn.textContent='+ ADD POSITION';
+  }
+}
+
+// ── Create tile DOM ───────────────────────────────────────────────────────────
+function createTile(sym, dir, ep, sz){
+  const tile = document.createElement('div');
+  tile.className = 'tile';
+  tile.id = 'tile-'+sym;
+  tile.innerHTML = `
+    <div class="tile-top">
+      <div>
+        <div class="tile-sym">${sym}</div>
+        <div class="tile-ts" id="ts-${sym}">Connecting...</div>
+      </div>
+      <div class="tile-meta">
+        <div class="dir-badge ${dir==='LONG'?'dir-l':'dir-s'}">${dir==='LONG'?'▲':'▼'} ${dir}</div>
+        <button class="btn-close-tile" onclick="closePosition('${sym}')">✕</button>
+      </div>
+    </div>
+
+    <!-- Loading state -->
+    <div class="tile-loading" id="tl-${sym}">
+      <div class="spin"></div>
+      <div class="spin-txt">FETCHING LIVE DATA...</div>
+    </div>
+
+    <!-- Live data (hidden until first update) -->
+    <div id="td-${sym}" class="hidden">
+
+      <!-- Price / PnL -->
+      <div class="price-row">
+        <div class="live-price" id="pr-${sym}">—</div>
+        <div class="pnl-block">
+          <div class="pnl-pct" id="pp-${sym}">—</div>
+          <div class="pnl-usd" id="pu-${sym}">Entry: ${fp(ep)}</div>
+        </div>
+      </div>
+
+      <!-- Live verdict strip -->
+      <div class="verdict-strip" id="vs-${sym}">
+        <div class="verdict-lbl">⬡ LIVE VERDICT</div>
+        <div class="verdict-txt" id="vt-${sym}">INITIALISING...</div>
+        <div class="health-bar-wrap">
+          <div class="health-bar"><div class="health-fill" id="hf-${sym}" style="width:50%"></div></div>
+          <div class="health-pct" id="hp-${sym}">50%</div>
+        </div>
+      </div>
+
+      <!-- Structural verdict -->
+      <div class="sv-row">
+        <div class="sv-badge" id="svb-${sym}">INITIALISING</div>
+        <div class="sv-key" id="svk-${sym}">Key level: —</div>
+      </div>
+
+      <!-- MTF Alignment -->
+      <div class="mtf-section">
+        <div class="section-lbl">Multi-Timeframe Alignment</div>
+        <div class="mtf-align-badge mab-grey" id="mab-${sym}">INITIALISING</div>
+        <div class="tf-row">
+          <div class="tf-cell">
+            <div class="tf-lbl">5M</div>
+            <div class="tf-score sc0" id="s5-${sym}">0/3</div>
+            <div class="tf-rsi" id="r5-${sym}">RSI —</div>
+          </div>
+          <div class="tf-cell">
+            <div class="tf-lbl">15M</div>
+            <div class="tf-score sc0" id="s15-${sym}">0/3</div>
+            <div class="tf-rsi" id="r15-${sym}">RSI —</div>
+          </div>
+          <div class="tf-cell">
+            <div class="tf-lbl">1H</div>
+            <div class="tf-score sc0" id="s1h-${sym}">0/3</div>
+            <div class="tf-rsi" id="r1h-${sym}">RSI —</div>
+          </div>
+          <div class="tf-cell">
+            <div class="tf-lbl">4H</div>
+            <div class="tf-score sc0" id="s4h-${sym}">0/3</div>
+            <div class="tf-rsi" id="r4h-${sym}">RSI —</div>
+          </div>
+        </div>
+        <!-- EMA Ribbon indicators -->
+        <div class="ind-row">
+          <div class="ind-chip">
+            <div class="ind-lbl">EMA 9/21</div>
+            <div class="ind-val iv-neu" id="ema-${sym}">—</div>
+          </div>
+          <div class="ind-chip">
+            <div class="ind-lbl">RSI 14</div>
+            <div class="ind-val iv-neu" id="rsi15-${sym}">—</div>
+          </div>
+          <div class="ind-chip">
+            <div class="ind-lbl">MACD</div>
+            <div class="ind-val iv-neu" id="macd-${sym}">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mini metrics -->
+      <div class="metrics-row">
+        <div class="mm">
+          <div class="mm-lbl">OB Ratio</div>
+          <div class="mm-val ca" id="ob-${sym}">—</div>
+        </div>
+        <div class="mm">
+          <div class="mm-lbl">OI Delta</div>
+          <div class="mm-val" id="oi-${sym}">—</div>
+        </div>
+        <div class="mm">
+          <div class="mm-lbl">Funding</div>
+          <div class="mm-val cg" id="fr-${sym}">—</div>
+        </div>
+        <div class="mm">
+          <div class="mm-lbl">Vol ×</div>
+          <div class="mm-val" id="vr-${sym}">—</div>
+        </div>
+        <div class="mm">
+          <div class="mm-lbl">Body ×</div>
+          <div class="mm-val" id="be-${sym}">—</div>
+        </div>
+        <div class="mm">
+          <div class="mm-lbl">24h Chg</div>
+          <div class="mm-val" id="g24-${sym}">—</div>
+        </div>
+      </div>
+
+      <!-- Signal flags -->
+      <div class="flags-row">
+        <div class="flag foff" id="fc-${sym}">⬡ CASCADE</div>
+        <div class="flag foff" id="fw-${sym}">⚠ LIQ WALL</div>
+        <div class="flag foff" id="fb-${sym}">⬥ VOL BUFFER</div>
+        <div class="flag foff" id="fv-${sym}">▲ HIGH VOL</div>
+      </div>
+
+      <!-- Playbook terminal -->
+      <div class="playbook">
+        <div class="pb-lbl">&gt;&gt; PLAYBOOK</div>
+        <div class="pb-txt" id="pb-${sym}">Awaiting data...</div>
+        <div class="pb-wait hidden" id="pw-${sym}"></div>
+      </div>
+
+    </div>
+  `;
+  document.getElementById('tilesContainer').appendChild(tile);
+}
+
+// ── Render tile data ──────────────────────────────────────────────────────────
+function renderTile(sym, s){
+  if(!document.getElementById('tile-'+sym)) return;
+
+  // Show live data section
+  document.getElementById('tl-'+sym).classList.add('hidden');
+  document.getElementById('td-'+sym).classList.remove('hidden');
+  document.getElementById('ts-'+sym).textContent = 'Updated: '+fts(s.last_update);
+
+  // Tile border health
+  const tile = document.getElementById('tile-'+sym);
+  tile.className = 'tile health-'+healthClass(s.health_score);
+
+  // Price + PnL
+  document.getElementById('pr-'+sym).textContent = fp(s.current_price);
+  const pp = document.getElementById('pp-'+sym);
+  pp.textContent=(s.pnl_pct>=0?'+':'')+f(s.pnl_pct,2)+'%';
+  pp.className='pnl-pct '+(s.pnl_pct>=0?'pos':'neg');
+  const pu = document.getElementById('pu-'+sym);
+  pu.textContent=(s.pnl_usd>=0?'+$':'-$')+f(Math.abs(s.pnl_usd),2);
+  pu.className='pnl-usd '+(s.pnl_usd>=0?'pos':'neg');
+
+  // Verdict strip
+  const vc = verdictClass(s.live_verdict);
+  const vs = document.getElementById('vs-'+sym);
+  vs.className='verdict-strip vs-'+vc;
+  const vt = document.getElementById('vt-'+sym);
+  vt.textContent = s.live_verdict||'—';
+  vt.className = 'verdict-txt vc-'+vc;
+  const h = s.health_score||0;
+  document.getElementById('hp-'+sym).textContent = h+'%';
+  const hf = document.getElementById('hf-'+sym);
+  hf.style.width = h+'%';
+  hf.className = 'health-fill hf'+(h>=65?'g':h>=40?'o':'r');
+
+  // Structural verdict
+  const sv = s.structural_verdict||{};
+  const svb = document.getElementById('svb-'+sym);
+  svb.textContent = sv.verdict||'—';
+  svb.className = 'sv-badge '+(sv.verdict_color?svClass(sv.verdict_color):'svo');
+  document.getElementById('svk-'+sym).textContent = sv.key_level?'Key level: '+fp(sv.key_level):'';
+
+  // MTF
+  const mtf = s.mtf||{};
+  const mab = document.getElementById('mab-'+sym);
+  mab.textContent = mtf.status||'—';
+  mab.className = 'mtf-align-badge '+mtfBadgeClass(mtf.color);
+
+  function setTF(id, tfdata){
+    const sc = tfdata?tfdata.score:0;
+    const el = document.getElementById(id+'-'+sym);
+    if(el){ el.textContent=sc+'/3'; el.className='tf-score '+scClass(sc); }
+    const re = document.getElementById('r'+id.replace('s','')+'-'+sym);
+    if(re && tfdata) re.textContent='RSI '+f(tfdata.rsi,1);
+  }
+  setTF('s5',  s.tf5m);
+  setTF('s15', s.tf15m);
+  setTF('s1h', s.tf1h);
+  setTF('s4h', s.tf4h);
+
+  // EMA/RSI/MACD from 15m
+  const tf15 = s.tf15m||{};
+  const emaEl = document.getElementById('ema-'+sym);
+  if(emaEl){
+    const eOk = tf15.price_above_ema21;
+    emaEl.textContent = eOk?'ABOVE':'BELOW';
+    emaEl.className = 'ind-val '+(eOk?'iv-bull':'iv-bear');
+  }
+  const rsi15El = document.getElementById('rsi15-'+sym);
+  if(rsi15El){
+    rsi15El.textContent = f(tf15.rsi,1);
+    rsi15El.className = 'ind-val '+(tf15.rsi_ok?'iv-bull':'iv-bear');
+  }
+  const macdEl = document.getElementById('macd-'+sym);
+  if(macdEl){
+    macdEl.textContent = tf15.macd_bull?'BULL':'BEAR';
+    macdEl.className = 'ind-val '+(tf15.macd_bull?'iv-bull':'iv-bear');
+  }
+
+  // Mini metrics
+  const ob = document.getElementById('ob-'+sym);
+  if(ob){ ob.textContent=f(s.ob_imbalance,3)+'×'; ob.className='mm-val '+(s.ob_imbalance>1.2?'pos':s.ob_imbalance<0.8?'neg':'ca'); }
+  const oi = document.getElementById('oi-'+sym);
+  if(oi){ oi.textContent=(s.oi_delta_pct>=0?'+':'')+f(s.oi_delta_pct,3)+'%'; oi.className='mm-val '+(s.oi_delta_pct>0?'pos':'neg'); }
+  const fr = document.getElementById('fr-'+sym);
+  if(fr){ fr.textContent=f(s.funding_rate*100,4)+'%'; }
+  const vr = document.getElementById('vr-'+sym);
+  if(vr){ vr.textContent=f(s.vol_ratio,2)+'×'; vr.className='mm-val '+(s.vol_ratio>1.2?'pos':'cm'); }
+  const be = document.getElementById('be-'+sym);
+  if(be){ be.textContent=f(s.body_expansion,2)+'×'; be.className='mm-val '+(s.body_expansion>1.3?'pos':'cm'); }
+  const gd = s.gecko_data||{};
+  const g24 = document.getElementById('g24-'+sym);
+  if(g24){
+    const ch=gd.change_24h||0;
+    g24.textContent=(ch>=0?'+':'')+f(ch,2)+'%';
+    g24.className='mm-val '+(ch>=0?'pos':'neg');
+  }
+
+  // Flags
+  document.getElementById('fc-'+sym).className='flag '+(s.cascade_signal?'fg2':'foff');
+  document.getElementById('fw-'+sym).className='flag '+(s.liq_wall?'fr2':'foff');
+  document.getElementById('fb-'+sym).className='flag '+(s.vol_buffer?'fo2':'foff');
+  document.getElementById('fv-'+sym).className='flag '+(s.high_volume?'fg2':'foff');
+
+  // Playbook
+  document.getElementById('pb-'+sym).textContent = sv.advice||s.playbook||'—';
+  const pw = document.getElementById('pw-'+sym);
+  if(pw){
+    if(sv.wait_advice){
+      pw.textContent=sv.wait_advice; pw.classList.remove('hidden');
+    } else {
+      pw.classList.add('hidden');
+    }
+  }
+}
+
+// ── Close position ────────────────────────────────────────────────────────────
+async function closePosition(sym){
+  if(!confirm('Close monitoring for '+sym+'?')) return;
+  try{ await fetch(API+'/close/'+sym,{method:'DELETE'}); }catch(e){}
+  activeSym.delete(sym);
+  const el = document.getElementById('tile-'+sym);
+  if(el) el.remove();
+  updateUI();
+}
+
+// ── Poll all positions ────────────────────────────────────────────────────────
+async function pollAll(){
+  if(activeSym.size===0) return;
+  try{
+    const r = await fetch(API+'/all');
+    if(!r.ok) return;
+    const data = await r.json();
+    // Update slot count
+    document.getElementById('slotUsed').textContent = data.count||0;
+    // Sync: remove tiles for closed positions
+    for(const sym of [...activeSym]){
+      if(!data.positions[sym]){
+        activeSym.delete(sym);
+        const el=document.getElementById('tile-'+sym);
+        if(el) el.remove();
+      }
+    }
+  }catch(e){}
+
+  // Fetch full state for each active position
+  for(const sym of activeSym){
+    try{
+      const r = await fetch(API+'/state/'+sym);
+      if(r.ok) renderTile(sym, await r.json());
+    }catch(e){}
+  }
+  updateUI();
+}
+
+function updateUI(){
+  const count = activeSym.size;
+  document.getElementById('slotUsed').textContent = count;
+  document.getElementById('emptyState').classList.toggle('hidden', count>0);
+  document.getElementById('gridHeader').classList.toggle('hidden', count===0);
+}
+
+// Start polling
+setInterval(pollAll, 15000);
+pollAll();
+
+document.addEventListener('keydown',e=>{if(e.key==='Enter')addPosition();});
+</script>
+</body>
+</html>
